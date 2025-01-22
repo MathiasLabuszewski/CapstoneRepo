@@ -52,3 +52,8 @@ Mkfile.old
 dkms.conf
 /Stm32Projects/.metadata
 /Stm32Projects/SubGHz_Phy_PingPong
+Stm32Projects/MeshProject/.cproject
+/Stm32Projects/MeshProject/Debug
+/Stm32Projects/MeshProject/.settings
+*.mk
+/Stm32Projects/MeshProject/Debug
