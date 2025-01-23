@@ -58,3 +58,4 @@ Stm32Projects/MeshProject/.settings/stm32cubeide.project.prefs
 *.mk
 Stm32Projects/MeshProject/Debug/MeshProject.list
 /Stm32Projects/MeshProject/Debug
+*.launch
