@@ -60,26 +60,14 @@ void Error_Handler(void);
 #define RTC_N_PREDIV_S 10
 #define RTC_PREDIV_S ((1<<RTC_N_PREDIV_S)-1)
 #define RTC_PREDIV_A ((1<<(15-RTC_N_PREDIV_S))-1)
-#define LED1_Pin GPIO_PIN_15
-#define LED1_GPIO_Port GPIOB
-#define LED2_Pin GPIO_PIN_9
-#define LED2_GPIO_Port GPIOB
-#define BUT1_Pin GPIO_PIN_0
-#define BUT1_GPIO_Port GPIOA
-#define PROB2_Pin GPIO_PIN_13
-#define PROB2_GPIO_Port GPIOB
-#define PROB1_Pin GPIO_PIN_12
-#define PROB1_GPIO_Port GPIOB
-#define BUT3_Pin GPIO_PIN_6
-#define BUT3_GPIO_Port GPIOC
-#define BUT2_Pin GPIO_PIN_1
-#define BUT2_GPIO_Port GPIOA
-#define LED3_Pin GPIO_PIN_11
-#define LED3_GPIO_Port GPIOB
-#define USARTx_RX_Pin GPIO_PIN_3
-#define USARTx_RX_GPIO_Port GPIOA
-#define USARTx_TX_Pin GPIO_PIN_2
-#define USARTx_TX_GPIO_Port GPIOA
+#define LED_Pin GPIO_PIN_5
+#define LED_Port GPIOB
+#define BUT_Pin GPIO_PIN_0
+#define BUT_Port GPIOA
+#define USARTx_RX_Pin GPIO_PIN_7
+#define USARTx_RX_GPIO_Port GPIOB
+#define USARTx_TX_Pin GPIO_PIN_6
+#define USARTx_TX_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 

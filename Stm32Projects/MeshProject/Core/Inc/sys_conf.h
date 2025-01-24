@@ -51,25 +51,25 @@ extern "C" {
 /**
   * @brief Activate monitoring (probes) of some internal RF signals for debug purpose
   */
-#define DEBUG_SUBGHZSPI_MONITORING_ENABLED   0
+#define DEBUG_SUBGHZSPI_MONITORING_ENABLED   1
 
-#define DEBUG_RF_NRESET_ENABLED              0
+#define DEBUG_RF_NRESET_ENABLED              1
 
-#define DEBUG_RF_HSE32RDY_ENABLED            0
+#define DEBUG_RF_HSE32RDY_ENABLED            1
 
-#define DEBUG_RF_SMPSRDY_ENABLED             0
+#define DEBUG_RF_SMPSRDY_ENABLED             1
 
-#define DEBUG_RF_LDORDY_ENABLED              0
+#define DEBUG_RF_LDORDY_ENABLED              1
 
-#define DEBUG_RF_DTB1_ENABLED                0
+#define DEBUG_RF_DTB1_ENABLED                1
 
-#define DEBUG_RF_BUSY_ENABLED                0
+#define DEBUG_RF_BUSY_ENABLED                1
 
 /**
   * @brief Enable/Disable MCU Debugger pins (dbg serial wires)
   * @note  by HW serial wires are ON by default, need to put them OFF to save power
   */
-#define DEBUGGER_ENABLED                     0
+#define DEBUGGER_ENABLED                     1
 
 /**
   * @brief Disable Low Power mode
