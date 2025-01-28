@@ -64,10 +64,9 @@ void Error_Handler(void);
 #define LED_Port GPIOB
 #define BUT_Pin GPIO_PIN_0
 #define BUT_Port GPIOA
-#define USARTx_RX_Pin GPIO_PIN_7
-#define USARTx_RX_GPIO_Port GPIOB
-#define USARTx_TX_Pin GPIO_PIN_6
-#define USARTx_TX_GPIO_Port GPIOB
+#define USART1_RX_Pin GPIO_PIN_7
+#define USART1_TX_Pin GPIO_PIN_6
+#define USART1_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 

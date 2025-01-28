@@ -39,14 +39,6 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-typedef enum
-{
-  RX,
-  RX_TIMEOUT,
-  RX_ERROR,
-  TX,
-  TX_TIMEOUT,
-} States_t;
 
 /* USER CODE END PTD */
 
@@ -56,10 +48,7 @@ typedef enum
 /*Timeout*/
 #define RX_TIMEOUT_VALUE              3000
 #define TX_TIMEOUT_VALUE              3000
-/* PING string*/
-#define PING "PING"
-/* PONG string*/
-#define PONG "PONG"
+
 /*Size of the payload to be sent*/
 /* Size must be greater of equal the PING and PONG*/
 #define MAX_APP_BUFFER_SIZE          255
@@ -84,23 +73,13 @@ typedef enum
 /* Radio events function pointer */
 static RadioEvents_t RadioEvents;
 
-/* USER CODE BEGIN PV */
-/*Ping Pong FSM states */
-static States_t State = RX;
+
 /* App Rx Buffer*/
 static uint8_t BufferRx[MAX_APP_BUFFER_SIZE];
 /* App Tx Buffer*/
 static uint8_t BufferTx[MAX_APP_BUFFER_SIZE];
 /* Last  Received Buffer Size*/
 uint16_t RxBufferSize = 0;
-/* Last  Received packer Rssi*/
-int8_t RssiValue = 0;
-/* Last  Received packer SNR (in Lora modulation)*/
-int8_t SnrValue = 0;
-/* Led Timers objects*/
-static UTIL_TIMER_Object_t timerLed;
-/* device state. Master: true, Slave: false*/
-bool isMaster = true;
 /* random delay to make sure 2 devices will sync*/
 /* the closest the random delays are, the longer it will
    take for the devices to sync when started simultaneously*/
@@ -109,91 +88,34 @@ static int32_t random_delay;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
-/*!
- * @brief Function to be executed on Radio Tx Done event
- */
-static void OnTxDone(void);
-
-/**
-  * @brief Function to be executed on Radio Rx Done event
-  * @param  payload ptr of buffer received
-  * @param  size buffer size
-  * @param  rssi
-  * @param  LoraSnr_FskCfo
-  */
 static void OnRxDone(uint8_t *payload, uint16_t size, int16_t rssi, int8_t LoraSnr_FskCfo);
-
-/**
-  * @brief Function executed on Radio Tx Timeout event
-  */
+static void OnTxDone(void);
 static void OnTxTimeout(void);
-
-/**
-  * @brief Function executed on Radio Rx Timeout event
-  */
 static void OnRxTimeout(void);
-
-/**
-  * @brief Function executed on Radio Rx Error event
-  */
 static void OnRxError(void);
+static void RX_Process(void);
+static void TX_Process(void);
 
-/* USER CODE BEGIN PFP */
-/**
-  * @brief  Function executed on when led timer elapses
-  * @param  context ptr of LED context
-  */
-static void OnledEvent(void *context);
-
-/**
-  * @brief PingPong state machine implementation
-  */
-static void PingPong_Process(void);
-
-/* USER CODE END PFP */
 
 /* Exported functions ---------------------------------------------------------*/
 void SubghzApp_Init(void)
 {
-  /* USER CODE BEGIN SubghzApp_Init_1 */
-
-  APP_LOG(TS_OFF, VLEVEL_M, "\n\rPING PONG\n\r");
-  /* Get SubGHY_Phy APP version*/
-  APP_LOG(TS_OFF, VLEVEL_M, "APPLICATION_VERSION: V%X.%X.%X\r\n",
-          (uint8_t)(APP_VERSION_MAIN),
-          (uint8_t)(APP_VERSION_SUB1),
-          (uint8_t)(APP_VERSION_SUB2));
-
-  /* Get MW SubGhz_Phy info */
-  APP_LOG(TS_OFF, VLEVEL_M, "MW_RADIO_VERSION:    V%X.%X.%X\r\n",
-          (uint8_t)(SUBGHZ_PHY_VERSION_MAIN),
-          (uint8_t)(SUBGHZ_PHY_VERSION_SUB1),
-          (uint8_t)(SUBGHZ_PHY_VERSION_SUB2));
-
-  /* Led Timers*/
-  UTIL_TIMER_Create(&timerLed, LED_PERIOD_MS, UTIL_TIMER_ONESHOT, OnledEvent, NULL);
-  UTIL_TIMER_Start(&timerLed);
-  /* USER CODE END SubghzApp_Init_1 */
-
   /* Radio initialization */
-  RadioEvents.TxDone = OnTxDone;
   RadioEvents.RxDone = OnRxDone;
+  RadioEvents.TxDone = OnTxDone;
   RadioEvents.TxTimeout = OnTxTimeout;
   RadioEvents.RxTimeout = OnRxTimeout;
   RadioEvents.RxError = OnRxError;
 
   Radio.Init(&RadioEvents);
 
-  /* USER CODE BEGIN SubghzApp_Init_2 */
-  /*calculate random delay for synchronization*/
   random_delay = (Radio.Random()) >> 22; /*10bits random e.g. from 0 to 1023 ms*/
 
   /* Radio Set frequency */
   Radio.SetChannel(RF_FREQUENCY);
 
   /* Radio configuration */
-  APP_LOG(TS_OFF, VLEVEL_M, "---------------\n\r");
-  APP_LOG(TS_OFF, VLEVEL_M, "LORA_MODULATION\n\r");
+  APP_LOG(TS_OFF, VLEVEL_M, "Capstone - BioSensor Solutions - LORA Test\n\r");
   APP_LOG(TS_OFF, VLEVEL_M, "LORA_BW=%d kHz\n\r", (1 << LORA_BANDWIDTH) * 125);
   APP_LOG(TS_OFF, VLEVEL_M, "LORA_SF=%d\n\r", LORA_SPREADING_FACTOR);
 
@@ -209,216 +131,84 @@ void SubghzApp_Init(void)
 
   Radio.SetMaxPayloadLength(MODEM_LORA, MAX_APP_BUFFER_SIZE);
 
-  /*fills tx buffer*/
-  memset(BufferTx, 0x0, MAX_APP_BUFFER_SIZE);
+  APP_LOG(TS_OFF, VLEVEL_L, "rand=%d\n\r", random_delay);
 
-  APP_LOG(TS_ON, VLEVEL_L, "rand=%d\n\r", random_delay);
-  /*starts reception*/
-  Radio.Rx(RX_TIMEOUT_VALUE + random_delay);
-
-  /*register task to to be run in while(1) after Radio IT*/
-  UTIL_SEQ_RegTask((1 << CFG_SEQ_Task_SubGHz_Phy_App_Process), UTIL_SEQ_RFU, PingPong_Process);
-  /* USER CODE END SubghzApp_Init_2 */
+  UTIL_SEQ_RegTask((1 << CFG_SEQ_Task_RX), UTIL_SEQ_RFU, RX_Process);
+  UTIL_SEQ_RegTask((1 << CFG_SEQ_Task_TX), UTIL_SEQ_RFU, TX_Process);
+  UTIL_SEQ_SetTask((1 << CFG_SEQ_Task_RX), CFG_SEQ_Prio_0);
 }
 
-/* USER CODE BEGIN EF */
-
-/* USER CODE END EF */
-
-/* Private functions ---------------------------------------------------------*/
 static void OnTxDone(void)
 {
-  /* USER CODE BEGIN OnTxDone */
-  APP_LOG(TS_ON, VLEVEL_L, "OnTxDone\n\r");
-  /* Update the State of the FSM*/
-  State = TX;
-  /* Run PingPong process in background*/
-  UTIL_SEQ_SetTask((1 << CFG_SEQ_Task_SubGHz_Phy_App_Process), CFG_SEQ_Prio_0);
-  /* USER CODE END OnTxDone */
+  APP_LOG(TS_ON, VLEVEL_L, "TX Done: Successfully sent packet\n\r");
+  UTIL_SEQ_SetTask((1 << CFG_SEQ_Task_RX), CFG_SEQ_Prio_RX);
 }
 
 static void OnRxDone(uint8_t *payload, uint16_t size, int16_t rssi, int8_t LoraSnr_FskCfo)
 {
-  /* USER CODE BEGIN OnRxDone */
-  APP_LOG(TS_ON, VLEVEL_L, "OnRxDone\n\r");
+  APP_LOG(TS_ON, VLEVEL_L, "RX Packet Successfully Received!\n\r");
   APP_LOG(TS_ON, VLEVEL_L, "RssiValue=%d dBm, SnrValue=%ddB\n\r", rssi, LoraSnr_FskCfo);
-  /* Record payload Signal to noise ratio in Lora*/
-  SnrValue = LoraSnr_FskCfo;
-
-  /* Update the State of the FSM*/
-  State = RX;
   /* Clear BufferRx*/
   memset(BufferRx, 0, MAX_APP_BUFFER_SIZE);
   /* Record payload size*/
   RxBufferSize = size;
   if (RxBufferSize <= MAX_APP_BUFFER_SIZE)
-  {
     memcpy(BufferRx, payload, RxBufferSize);
-  }
-  /* Record Received Signal Strength*/
-  RssiValue = rssi;
   /* Record payload content*/
-  APP_LOG(TS_ON, VLEVEL_H, "payload. size=%d \n\r", size);
+  APP_LOG(TS_ON, VLEVEL_M, "payload. size=%d \n\r", size);
   for (int32_t i = 0; i < PAYLOAD_LEN; i++)
   {
-    APP_LOG(TS_OFF, VLEVEL_H, "%02X", BufferRx[i]);
+    APP_LOG(TS_OFF, VLEVEL_M, "%02X", BufferRx[i]);
     if (i % 16 == 15)
     {
-      APP_LOG(TS_OFF, VLEVEL_H, "\n\r");
+      APP_LOG(TS_OFF, VLEVEL_M, "\n\r");
     }
   }
-  APP_LOG(TS_OFF, VLEVEL_H, "\n\r");
-  /* Run PingPong process in background*/
-  UTIL_SEQ_SetTask((1 << CFG_SEQ_Task_SubGHz_Phy_App_Process), CFG_SEQ_Prio_0);
-  /* USER CODE END OnRxDone */
+  UTIL_SEQ_SetTask((1 << CFG_SEQ_Task_RX), CFG_SEQ_Prio_RX);
 }
 
 static void OnTxTimeout(void)
 {
-  /* USER CODE BEGIN OnTxTimeout */
-  APP_LOG(TS_ON, VLEVEL_L, "OnTxTimeout\n\r");
-  /* Update the State of the FSM*/
-  State = TX_TIMEOUT;
-  /* Run PingPong process in background*/
-  UTIL_SEQ_SetTask((1 << CFG_SEQ_Task_SubGHz_Phy_App_Process), CFG_SEQ_Prio_0);
-  /* USER CODE END OnTxTimeout */
+	APP_LOG(TS_ON, VLEVEL_L, "TX Timeout: currently not Retrying TX\n\r");
+//	UTIL_SEQ_SetTask((1 << CFG_SEQ_Task_TX), CFG_SEQ_Prio_TX);
 }
 
 static void OnRxTimeout(void)
 {
-  /* USER CODE BEGIN OnRxTimeout */
-  APP_LOG(TS_ON, VLEVEL_L, "OnRxTimeout\n\r");
-  /* Update the State of the FSM*/
-  State = RX_TIMEOUT;
-  /* Run PingPong process in background*/
-  UTIL_SEQ_SetTask((1 << CFG_SEQ_Task_SubGHz_Phy_App_Process), CFG_SEQ_Prio_0);
-  /* USER CODE END OnRxTimeout */
+	APP_LOG(TS_ON, VLEVEL_L, "RX Timeout: Retrying RX\n\r");
+	UTIL_SEQ_SetTask((1 << CFG_SEQ_Task_RX), CFG_SEQ_Prio_RX);
 }
 
 static void OnRxError(void)
 {
-  /* USER CODE BEGIN OnRxError */
-  APP_LOG(TS_ON, VLEVEL_L, "OnRxError\n\r");
-  /* Update the State of the FSM*/
-  State = RX_ERROR;
-  /* Run PingPong process in background*/
-  UTIL_SEQ_SetTask((1 << CFG_SEQ_Task_SubGHz_Phy_App_Process), CFG_SEQ_Prio_0);
-  /* USER CODE END OnRxError */
+	APP_LOG(TS_ON, VLEVEL_L, "RX Error: Retrying RX\n\r");
+	UTIL_SEQ_SetTask((1 << CFG_SEQ_Task_RX), CFG_SEQ_Prio_RX);
 }
 
-/* USER CODE BEGIN PrFD */
-static void PingPong_Process(void)
+static void RX_Process(void)
 {
-  Radio.Sleep();
+	APP_LOG(TS_ON, VLEVEL_L, "RX Start\n\r");
+	Radio.Rx(RX_TIMEOUT_VALUE);
+}
 
-  switch (State)
+static void TX_Process(void)
+{
+	HAL_GPIO_WritePin(LED_Port, LED_Pin, GPIO_PIN_SET);
+    int32_t payload = (Radio.Random()) >> 22;
+    APP_LOG(TS_ON, VLEVEL_L, "TX Start: Attempting to send payload - %d\n\r", payload);
+	HAL_Delay(Radio.GetWakeupTime() + RX_TIME_MARGIN);
+    memcpy(BufferTx, &payload, sizeof(payload));
+    Radio.Send(BufferTx, sizeof(payload));
+    HAL_GPIO_WritePin(LED_Port, LED_Pin, GPIO_PIN_RESET);
+}
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+  if (GPIO_Pin == BUT_Pin)
   {
-    case RX:
-
-      if (isMaster == true)
-      {
-        if (RxBufferSize > 0)
-        {
-          if (strncmp((const char *)BufferRx, PONG, sizeof(PONG) - 1) == 0)
-          {
-            UTIL_TIMER_Stop(&timerLed);
-            /* switch off green led */
-//            HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_RESET); /* LED_GREEN */
-//            /* master toggles red led */
-//            HAL_GPIO_TogglePin(LED3_GPIO_Port, LED3_Pin); /* LED_RED */
-            /* Add delay between RX and TX */
-            HAL_Delay(Radio.GetWakeupTime() + RX_TIME_MARGIN);
-            /* master sends PING*/
-            APP_LOG(TS_ON, VLEVEL_L, "..."
-                    "PING"
-                    "\n\r");
-            APP_LOG(TS_ON, VLEVEL_L, "Master Tx start\n\r");
-            memcpy(BufferTx, PING, sizeof(PING) - 1);
-            Radio.Send(BufferTx, PAYLOAD_LEN);
-          }
-          else if (strncmp((const char *)BufferRx, PING, sizeof(PING) - 1) == 0)
-          {
-            /* A master already exists then become a slave */
-            isMaster = false;
-            APP_LOG(TS_ON, VLEVEL_L, "Slave Rx start\n\r");
-            Radio.Rx(RX_TIMEOUT_VALUE);
-          }
-          else /* valid reception but neither a PING or a PONG message */
-          {
-            /* Set device as master and start again */
-            isMaster = true;
-            APP_LOG(TS_ON, VLEVEL_L, "Master Rx start\n\r");
-            Radio.Rx(RX_TIMEOUT_VALUE);
-          }
-        }
-      }
-      else
-      {
-        if (RxBufferSize > 0)
-        {
-          if (strncmp((const char *)BufferRx, PING, sizeof(PING) - 1) == 0)
-          {
-            UTIL_TIMER_Stop(&timerLed);
-            /* switch off red led */
-//            HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_RESET); /* LED_RED */
-//            /* slave toggles green led */
-//            HAL_GPIO_TogglePin(LED2_GPIO_Port, LED2_Pin); /* LED_GREEN */
-            /* Add delay between RX and TX */
-            HAL_Delay(Radio.GetWakeupTime() + RX_TIME_MARGIN);
-            /*slave sends PONG*/
-            APP_LOG(TS_ON, VLEVEL_L, "..."
-                    "PONG"
-                    "\n\r");
-            APP_LOG(TS_ON, VLEVEL_L, "Slave  Tx start\n\r");
-            memcpy(BufferTx, PONG, sizeof(PONG) - 1);
-            Radio.Send(BufferTx, PAYLOAD_LEN);
-          }
-          else /* valid reception but not a PING as expected */
-          {
-            /* Set device as master and start again */
-            isMaster = true;
-            APP_LOG(TS_ON, VLEVEL_L, "Master Rx start\n\r");
-            Radio.Rx(RX_TIMEOUT_VALUE);
-          }
-        }
-      }
-      break;
-    case TX:
-      APP_LOG(TS_ON, VLEVEL_L, "Rx start\n\r");
-      Radio.Rx(RX_TIMEOUT_VALUE);
-      break;
-    case RX_TIMEOUT:
-    case RX_ERROR:
-      if (isMaster == true)
-      {
-        /* Send the next PING frame */
-        /* Add delay between RX and TX*/
-        /* add random_delay to force sync between boards after some trials*/
-        HAL_Delay(Radio.GetWakeupTime() + RX_TIME_MARGIN + random_delay);
-        APP_LOG(TS_ON, VLEVEL_L, "Master Tx start\n\r");
-        /* master sends PING*/
-        memcpy(BufferTx, PING, sizeof(PING) - 1);
-        Radio.Send(BufferTx, PAYLOAD_LEN);
-      }
-      else
-      {
-        APP_LOG(TS_ON, VLEVEL_L, "Slave Rx start\n\r");
-        Radio.Rx(RX_TIMEOUT_VALUE);
-      }
-      break;
-    case TX_TIMEOUT:
-      APP_LOG(TS_ON, VLEVEL_L, "Slave Rx start\n\r");
-      Radio.Rx(RX_TIMEOUT_VALUE);
-      break;
-    default:
-      break;
+    APP_LOG(TS_ON, VLEVEL_H, "Button Pressed: Adding TX Task to Sequencer\n\r");
+    UTIL_SEQ_SetTask((1 << CFG_SEQ_Task_TX), CFG_SEQ_Prio_TX);
   }
-}
-
-static void OnledEvent(void *context)
-{
-  HAL_GPIO_TogglePin(LED_Port, LED_Pin);
-  UTIL_TIMER_Start(&timerLed);
 }
 
 /* USER CODE END PrFD */

@@ -63,9 +63,8 @@ typedef enum
 typedef enum
 {
   CFG_SEQ_Prio_0,
-  /* USER CODE BEGIN CFG_SEQ_Prio_Id_t */
-
-  /* USER CODE END CFG_SEQ_Prio_Id_t */
+  CFG_SEQ_Prio_TX,
+  CFG_SEQ_Prio_RX,
   CFG_SEQ_Prio_NBR,
 } CFG_SEQ_Prio_Id_t;
 
@@ -75,10 +74,8 @@ typedef enum
   */
 typedef enum
 {
-  CFG_SEQ_Task_SubGHz_Phy_App_Process,
-  /* USER CODE BEGIN CFG_SEQ_Task_Id_t */
-
-  /* USER CODE END CFG_SEQ_Task_Id_t */
+  CFG_SEQ_Task_RX,
+  CFG_SEQ_Task_TX,
   CFG_SEQ_Task_NBR
 } CFG_SEQ_Task_Id_t;
 

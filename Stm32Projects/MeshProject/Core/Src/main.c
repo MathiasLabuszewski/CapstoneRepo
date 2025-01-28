@@ -87,6 +87,8 @@ int main(void)
   MX_GPIO_Init();
   MX_SubGHz_Phy_Init();
   /* USER CODE BEGIN 2 */
+  HAL_NVIC_SetPriority(EXTI0_IRQn, 2, 0);
+  HAL_NVIC_EnableIRQ(EXTI0_IRQn);
 
   /* USER CODE END 2 */
 
