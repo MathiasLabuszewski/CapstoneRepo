@@ -46,8 +46,8 @@
 /* USER CODE BEGIN PD */
 /* Configurations */
 /*Timeout*/
-#define RX_TIMEOUT_VALUE              3000
-#define TX_TIMEOUT_VALUE              3000
+#define RX_TIMEOUT_VALUE              5000
+#define TX_TIMEOUT_VALUE              1000
 
 /*Size of the payload to be sent*/
 /* Size must be greater of equal the PING and PONG*/
@@ -96,8 +96,6 @@ static void OnRxError(void);
 static void RX_Process(void);
 static void TX_Process(void);
 
-
-/* Exported functions ---------------------------------------------------------*/
 void SubghzApp_Init(void)
 {
   /* Radio initialization */
@@ -146,31 +144,17 @@ static void OnTxDone(void)
 
 static void OnRxDone(uint8_t *payload, uint16_t size, int16_t rssi, int8_t LoraSnr_FskCfo)
 {
-  APP_LOG(TS_ON, VLEVEL_L, "RX Packet Successfully Received!\n\r");
-  APP_LOG(TS_ON, VLEVEL_L, "RssiValue=%d dBm, SnrValue=%ddB\n\r", rssi, LoraSnr_FskCfo);
-  /* Clear BufferRx*/
-  memset(BufferRx, 0, MAX_APP_BUFFER_SIZE);
-  /* Record payload size*/
-  RxBufferSize = size;
-  if (RxBufferSize <= MAX_APP_BUFFER_SIZE)
-    memcpy(BufferRx, payload, RxBufferSize);
-  /* Record payload content*/
-  APP_LOG(TS_ON, VLEVEL_M, "payload. size=%d \n\r", size);
-  for (int32_t i = 0; i < PAYLOAD_LEN; i++)
-  {
-    APP_LOG(TS_OFF, VLEVEL_M, "%02X", BufferRx[i]);
-    if (i % 16 == 15)
-    {
-      APP_LOG(TS_OFF, VLEVEL_M, "\n\r");
-    }
-  }
-  UTIL_SEQ_SetTask((1 << CFG_SEQ_Task_RX), CFG_SEQ_Prio_RX);
+	uint32_t *pay = (uint32_t)payload;
+	APP_LOG(TS_ON, VLEVEL_L, "RX Packet Successfully Received! Payload - %d\n\r", *pay);
+	APP_LOG(TS_ON, VLEVEL_L, "RssiValue=%d dBm, SnrValue=%ddB\n\r", rssi, LoraSnr_FskCfo);
+	memset(BufferRx, 0, MAX_APP_BUFFER_SIZE);
+	UTIL_SEQ_SetTask((1 << CFG_SEQ_Task_RX), CFG_SEQ_Prio_RX);
 }
 
 static void OnTxTimeout(void)
 {
-	APP_LOG(TS_ON, VLEVEL_L, "TX Timeout: currently not Retrying TX\n\r");
-//	UTIL_SEQ_SetTask((1 << CFG_SEQ_Task_TX), CFG_SEQ_Prio_TX);
+	APP_LOG(TS_ON, VLEVEL_L, "TX Timeout: Retrying TX\n\r");
+	UTIL_SEQ_SetTask((1 << CFG_SEQ_Task_TX), CFG_SEQ_Prio_TX);
 }
 
 static void OnRxTimeout(void)
@@ -194,7 +178,7 @@ static void RX_Process(void)
 static void TX_Process(void)
 {
 	HAL_GPIO_WritePin(LED_Port, LED_Pin, GPIO_PIN_SET);
-    int32_t payload = (Radio.Random()) >> 22;
+    uint32_t payload = (Radio.Random()) >> 22;
     APP_LOG(TS_ON, VLEVEL_L, "TX Start: Attempting to send payload - %d\n\r", payload);
 	HAL_Delay(Radio.GetWakeupTime() + RX_TIME_MARGIN);
     memcpy(BufferTx, &payload, sizeof(payload));
@@ -210,5 +194,3 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
     UTIL_SEQ_SetTask((1 << CFG_SEQ_Task_TX), CFG_SEQ_Prio_TX);
   }
 }
-
-/* USER CODE END PrFD */
