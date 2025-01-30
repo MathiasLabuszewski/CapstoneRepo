@@ -8,6 +8,7 @@
 #include "utilities_def.h"
 #include "app_version.h"
 #include "subghz_phy_version.h"
+#include "utils.h"
 #include <stdbool.h>
 
 /*Timeout*/
@@ -39,7 +40,7 @@
 static RadioEvents_t RadioEvents;
 
 bool TX_InProgress = false;
-static uint32_t payloadSize;
+static uint64_t payloadSize;
 
 /* App Rx Buffer*/
 static uint8_t BufferRx[MAX_APP_BUFFER_SIZE];
@@ -80,9 +81,11 @@ void SubghzApp_Init(void)
   Radio.SetChannel(RF_FREQUENCY);
 
   /* Radio configuration */
-  APP_LOG(TS_OFF, VLEVEL_M, "Capstone - BioSensor Solutions - LORA Test\n\r");
-  APP_LOG(TS_OFF, VLEVEL_M, "LORA_BW=%d kHz\n\r", (1 << LORA_BANDWIDTH) * 125);
-  APP_LOG(TS_OFF, VLEVEL_M, "LORA_SF=%d\n\r", LORA_SPREADING_FACTOR);
+  APP_LOG(TS_OFF, VLEVEL_L, "==========================================\n\r");
+  APP_LOG(TS_OFF, VLEVEL_L, "Capstone - BioSensor Solutions - LORA Test\n\r");
+  APP_LOG(TS_OFF, VLEVEL_L, "LORA_BW=%d kHz\n\r", (1 << LORA_BANDWIDTH) * 125);
+  APP_LOG(TS_OFF, VLEVEL_L, "LORA_SF=%d\n\r", LORA_SPREADING_FACTOR);
+  APP_LOG(TS_OFF, VLEVEL_L, "==========================================\n\r");
 
   Radio.SetTxConfig(MODEM_LORA, TX_OUTPUT_POWER, 0, LORA_BANDWIDTH,
                     LORA_SPREADING_FACTOR, LORA_CODINGRATE,
@@ -96,7 +99,7 @@ void SubghzApp_Init(void)
 
   Radio.SetMaxPayloadLength(MODEM_LORA, MAX_APP_BUFFER_SIZE);
 
-  APP_LOG(TS_OFF, VLEVEL_L, "rand=%d\n\r", random_delay);
+  APP_LOG(TS_OFF, VLEVEL_M, "rand=%d\n\r", random_delay);
 
   UTIL_SEQ_RegTask((1 << CFG_SEQ_Task_RX), UTIL_SEQ_RFU, RX_Process);
   UTIL_SEQ_RegTask((1 << CFG_SEQ_Task_TX), UTIL_SEQ_RFU, TX_Process);
@@ -105,7 +108,8 @@ void SubghzApp_Init(void)
 
 static void OnTxDone(void)
 {
-    APP_LOG(TS_ON, VLEVEL_L, "TX Done: Successfully sent packet\n\r");
+    APP_LOG(TS_ON, VLEVEL_M, "TX Done: Successfully sent packet\n\r");
+    APP_LOG(TS_ON, VLEVEL_L, "------------------------------------\n\r");
     TX_InProgress = false;
     HAL_GPIO_WritePin(LED_Port, LED_Pin, GPIO_PIN_SET);
     UTIL_SEQ_SetTask((1 << CFG_SEQ_Task_RX), CFG_SEQ_Prio_RX);
@@ -113,22 +117,31 @@ static void OnTxDone(void)
 
 static void OnRxDone(uint8_t *payload, uint16_t size, int16_t rssi, int8_t LoraSnr_FskCfo)
 {
-	uint32_t *pay = (uint32_t*)payload;
-	APP_LOG(TS_ON, VLEVEL_L, "RX Packet Successfully Received! Payload - %d\n\r", *pay);
+	uint64_t *pay = (uint64_t*)payload;
+	uint8_t conf = (uint8_t)(*pay >> 56);
+    uint32_t deviceNum = (uint32_t)(*pay >> 24);
+    uint32_t data = (uint32_t)*pay;
+	APP_LOG(TS_ON, VLEVEL_L, "------------------------------------\n\r");
+	APP_LOG(TS_ON, VLEVEL_L, "RX Packet Successfully Received!\n\r");
 	APP_LOG(TS_ON, VLEVEL_L, "RssiValue=%d dBm, SnrValue=%ddB\n\r", rssi, LoraSnr_FskCfo);
+	APP_LOG(TS_ON, VLEVEL_L, "Confirmation - %02X\n\r", conf);
+	APP_LOG(TS_ON, VLEVEL_L, "Device Number - %08X\n\r", deviceNum);
+	APP_LOG(TS_ON, VLEVEL_L, "Data - %06X\n\r", data);
+	APP_LOG(TS_ON, VLEVEL_L, "Payload - %016X\n\r", *pay);
+	APP_LOG(TS_ON, VLEVEL_L, "------------------------------------\n\r");
 	memset(BufferRx, 0, MAX_APP_BUFFER_SIZE);
 	UTIL_SEQ_SetTask((1 << CFG_SEQ_Task_RX), CFG_SEQ_Prio_RX);
 }
 
 static void OnTxTimeout(void)
 {
-	APP_LOG(TS_ON, VLEVEL_L, "TX Timeout: Retrying TX\n\r");
+	APP_LOG(TS_ON, VLEVEL_M, "TX Timeout: Retrying TX\n\r");
 	UTIL_SEQ_SetTask((1 << CFG_SEQ_Task_TX), CFG_SEQ_Prio_TX);
 }
 
 static void OnRxTimeout(void)
 {
-	APP_LOG(TS_ON, VLEVEL_L, "RX Timeout: Retrying RX\n\r");
+	APP_LOG(TS_ON, VLEVEL_M, "RX Timeout: Retrying RX\n\r");
 	UTIL_SEQ_SetTask((1 << CFG_SEQ_Task_RX), CFG_SEQ_Prio_RX);
 }
 
@@ -140,7 +153,7 @@ static void OnRxError(void)
 
 static void RX_Process(void)
 {
-	APP_LOG(TS_ON, VLEVEL_L, "RX Start\n\r");
+	APP_LOG(TS_ON, VLEVEL_M, "RX Start\n\r");
 	Radio.Rx(RX_TIMEOUT_VALUE);
 }
 
@@ -149,8 +162,18 @@ static void TX_Process(void)
 	if(!TX_InProgress){
 		HAL_GPIO_WritePin(LED_Port, LED_Pin, GPIO_PIN_RESET);
 		TX_InProgress = true;
-		uint32_t payload = (Radio.Random()) >> 22;
-		APP_LOG(TS_ON, VLEVEL_L, "TX Start: Attempting to send payload - %d\n\r", payload);
+		uint8_t conf = 206;
+		uint32_t deviceNum = UID_GetDeviceNumber();
+		uint32_t data = (Radio.Random()) >> 8;
+	    uint64_t payload = ((uint64_t)conf << 56)
+	                     | ((uint64_t)deviceNum << 24)
+	                     | ((uint64_t)data);
+		APP_LOG(TS_ON, VLEVEL_L, "------------------------------------\n\r");
+		APP_LOG(TS_ON, VLEVEL_L, "TX Start: Attempting to send payload\n\r");
+		APP_LOG(TS_ON, VLEVEL_L, "Confirmation - %02X\n\r", conf);
+		APP_LOG(TS_ON, VLEVEL_L, "Device Number - %08X\n\r", deviceNum);
+		APP_LOG(TS_ON, VLEVEL_L, "Data - %06X\n\r", data);
+		APP_LOG(TS_ON, VLEVEL_L, "Payload - %016X\n\r", payload);
 		payloadSize = sizeof(payload);
 		memcpy(BufferTx, &payload, payloadSize);
 	}
