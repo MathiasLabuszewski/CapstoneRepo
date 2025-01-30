@@ -56,7 +56,7 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
   HAL_GPIO_Init(LED_Port, &GPIO_InitStruct);
 
-  HAL_GPIO_WritePin(LED_Port, LED_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(LED_Port, LED_Pin, GPIO_PIN_SET);
 
 
   /*Configure Button GPIO pins */

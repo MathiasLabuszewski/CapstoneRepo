@@ -1,50 +1,15 @@
-/* USER CODE BEGIN Header */
-/**
-  ******************************************************************************
-  * @file    subghz_phy_app.c
-  * @author  MCD Application Team
-  * @brief   Application of the SubGHz_Phy Middleware
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2021 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
-/* USER CODE END Header */
-
 /* Includes ------------------------------------------------------------------*/
 #include "platform.h"
 #include "sys_app.h"
 #include "subghz_phy_app.h"
 #include "radio.h"
-
-/* USER CODE BEGIN Includes */
 #include "stm32_timer.h"
 #include "stm32_seq.h"
 #include "utilities_def.h"
 #include "app_version.h"
 #include "subghz_phy_version.h"
-/* USER CODE END Includes */
+#include <stdbool.h>
 
-/* External variables ---------------------------------------------------------*/
-/* USER CODE BEGIN EV */
-
-/* USER CODE END EV */
-
-/* Private typedef -----------------------------------------------------------*/
-/* USER CODE BEGIN PTD */
-
-/* USER CODE END PTD */
-
-/* Private define ------------------------------------------------------------*/
-/* USER CODE BEGIN PD */
-/* Configurations */
 /*Timeout*/
 #define RX_TIMEOUT_VALUE              5000
 #define TX_TIMEOUT_VALUE              1000
@@ -73,6 +38,8 @@
 /* Radio events function pointer */
 static RadioEvents_t RadioEvents;
 
+bool TX_InProgress = false;
+static uint32_t payloadSize;
 
 /* App Rx Buffer*/
 static uint8_t BufferRx[MAX_APP_BUFFER_SIZE];
@@ -138,13 +105,15 @@ void SubghzApp_Init(void)
 
 static void OnTxDone(void)
 {
-  APP_LOG(TS_ON, VLEVEL_L, "TX Done: Successfully sent packet\n\r");
-  UTIL_SEQ_SetTask((1 << CFG_SEQ_Task_RX), CFG_SEQ_Prio_RX);
+    APP_LOG(TS_ON, VLEVEL_L, "TX Done: Successfully sent packet\n\r");
+    TX_InProgress = false;
+    HAL_GPIO_WritePin(LED_Port, LED_Pin, GPIO_PIN_SET);
+    UTIL_SEQ_SetTask((1 << CFG_SEQ_Task_RX), CFG_SEQ_Prio_RX);
 }
 
 static void OnRxDone(uint8_t *payload, uint16_t size, int16_t rssi, int8_t LoraSnr_FskCfo)
 {
-	uint32_t *pay = (uint32_t)payload;
+	uint32_t *pay = (uint32_t*)payload;
 	APP_LOG(TS_ON, VLEVEL_L, "RX Packet Successfully Received! Payload - %d\n\r", *pay);
 	APP_LOG(TS_ON, VLEVEL_L, "RssiValue=%d dBm, SnrValue=%ddB\n\r", rssi, LoraSnr_FskCfo);
 	memset(BufferRx, 0, MAX_APP_BUFFER_SIZE);
@@ -177,20 +146,19 @@ static void RX_Process(void)
 
 static void TX_Process(void)
 {
-	HAL_GPIO_WritePin(LED_Port, LED_Pin, GPIO_PIN_SET);
-    uint32_t payload = (Radio.Random()) >> 22;
-    APP_LOG(TS_ON, VLEVEL_L, "TX Start: Attempting to send payload - %d\n\r", payload);
-	HAL_Delay(Radio.GetWakeupTime() + RX_TIME_MARGIN);
-    memcpy(BufferTx, &payload, sizeof(payload));
-    Radio.Send(BufferTx, sizeof(payload));
-    HAL_GPIO_WritePin(LED_Port, LED_Pin, GPIO_PIN_RESET);
+	if(!TX_InProgress){
+		HAL_GPIO_WritePin(LED_Port, LED_Pin, GPIO_PIN_RESET);
+		TX_InProgress = true;
+		uint32_t payload = (Radio.Random()) >> 22;
+		APP_LOG(TS_ON, VLEVEL_L, "TX Start: Attempting to send payload - %d\n\r", payload);
+		payloadSize = sizeof(payload);
+		memcpy(BufferTx, &payload, payloadSize);
+	}
+    Radio.Send(BufferTx, payloadSize);
 }
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-  if (GPIO_Pin == BUT_Pin)
-  {
-    APP_LOG(TS_ON, VLEVEL_H, "Button Pressed: Adding TX Task to Sequencer\n\r");
+  if (GPIO_Pin == BUT_Pin && !TX_InProgress)
     UTIL_SEQ_SetTask((1 << CFG_SEQ_Task_TX), CFG_SEQ_Prio_TX);
-  }
 }
