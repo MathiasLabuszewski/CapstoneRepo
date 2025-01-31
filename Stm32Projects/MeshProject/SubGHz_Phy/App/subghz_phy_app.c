@@ -120,14 +120,14 @@ static void OnRxDone(uint8_t *payload, uint16_t size, int16_t rssi, int8_t LoraS
 	uint64_t *pay = (uint64_t*)payload;
 	uint8_t conf = (uint8_t)(*pay >> 56);
     uint32_t deviceNum = (uint32_t)(*pay >> 24);
-    uint32_t data = (uint32_t)*pay;
+    uint32_t data = ((uint32_t)(*pay << 8)) >> 8;
 	APP_LOG(TS_ON, VLEVEL_L, "------------------------------------\n\r");
 	APP_LOG(TS_ON, VLEVEL_L, "RX Packet Successfully Received!\n\r");
 	APP_LOG(TS_ON, VLEVEL_L, "RssiValue=%d dBm, SnrValue=%ddB\n\r", rssi, LoraSnr_FskCfo);
 	APP_LOG(TS_ON, VLEVEL_L, "Confirmation - %02X\n\r", conf);
 	APP_LOG(TS_ON, VLEVEL_L, "Device Number - %08X\n\r", deviceNum);
 	APP_LOG(TS_ON, VLEVEL_L, "Data - %06X\n\r", data);
-	APP_LOG(TS_ON, VLEVEL_L, "Payload - %016X\n\r", *pay);
+	APP_LOG(TS_ON, VLEVEL_L, "Payload - %08X%08X\n\r", (uint32_t)(*pay >> 32), (uint32_t)*pay);
 	APP_LOG(TS_ON, VLEVEL_L, "------------------------------------\n\r");
 	memset(BufferRx, 0, MAX_APP_BUFFER_SIZE);
 	UTIL_SEQ_SetTask((1 << CFG_SEQ_Task_RX), CFG_SEQ_Prio_RX);
@@ -173,7 +173,7 @@ static void TX_Process(void)
 		APP_LOG(TS_ON, VLEVEL_L, "Confirmation - %02X\n\r", conf);
 		APP_LOG(TS_ON, VLEVEL_L, "Device Number - %08X\n\r", deviceNum);
 		APP_LOG(TS_ON, VLEVEL_L, "Data - %06X\n\r", data);
-		APP_LOG(TS_ON, VLEVEL_L, "Payload - %016X\n\r", payload);
+		APP_LOG(TS_ON, VLEVEL_L, "Payload - %08X%08X\n\r", (uint32_t)(payload >> 32), (uint32_t)payload);
 		payloadSize = sizeof(payload);
 		memcpy(BufferTx, &payload, payloadSize);
 	}
