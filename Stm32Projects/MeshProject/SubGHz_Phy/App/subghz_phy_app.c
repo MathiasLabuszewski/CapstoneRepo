@@ -53,6 +53,8 @@ uint16_t RxBufferSize = 0;
    take for the devices to sync when started simultaneously*/
 static int32_t random_delay;
 
+static const uint8_t CONF = 206;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -109,7 +111,7 @@ void SubghzApp_Init(void)
 static void OnTxDone(void)
 {
     APP_LOG(TS_ON, VLEVEL_M, "TX Done: Successfully sent packet\n\r");
-    APP_LOG(TS_ON, VLEVEL_L, "------------------------------------\n\r");
+    APP_LOG(TS_OFF, VLEVEL_L, "------------------------------------\n\r");
     TX_InProgress = false;
     HAL_GPIO_WritePin(LED_Port, LED_Pin, GPIO_PIN_SET);
     UTIL_SEQ_SetTask((1 << CFG_SEQ_Task_RX), CFG_SEQ_Prio_RX);
@@ -121,14 +123,18 @@ static void OnRxDone(uint8_t *payload, uint16_t size, int16_t rssi, int8_t LoraS
 	uint8_t conf = (uint8_t)(*pay >> 56);
     uint32_t deviceNum = (uint32_t)(*pay >> 24);
     uint32_t data = ((uint32_t)(*pay << 8)) >> 8;
-	APP_LOG(TS_ON, VLEVEL_L, "------------------------------------\n\r");
-	APP_LOG(TS_ON, VLEVEL_L, "RX Packet Successfully Received!\n\r");
-	APP_LOG(TS_ON, VLEVEL_L, "RssiValue=%d dBm, SnrValue=%ddB\n\r", rssi, LoraSnr_FskCfo);
-	APP_LOG(TS_ON, VLEVEL_L, "Confirmation - %02X\n\r", conf);
-	APP_LOG(TS_ON, VLEVEL_L, "Device Number - %08X\n\r", deviceNum);
-	APP_LOG(TS_ON, VLEVEL_L, "Data - %06X\n\r", data);
-	APP_LOG(TS_ON, VLEVEL_L, "Payload - %08X%08X\n\r", (uint32_t)(*pay >> 32), (uint32_t)*pay);
-	APP_LOG(TS_ON, VLEVEL_L, "------------------------------------\n\r");
+	APP_LOG(TS_OFF, VLEVEL_L, "------------------------------------\n\r");
+	APP_LOG(TS_OFF, VLEVEL_L, "RX Packet Successfully Received!\n\r");
+	APP_LOG(TS_OFF, VLEVEL_L, "RssiValue=%d dBm, SnrValue=%ddB\n\r", rssi, LoraSnr_FskCfo);
+    if(conf == CONF){
+		APP_LOG(TS_OFF, VLEVEL_L, "Confirmation - %02X\n\r", conf);
+		APP_LOG(TS_OFF, VLEVEL_L, "Device Number - %08X\n\r", deviceNum);
+		APP_LOG(TS_OFF, VLEVEL_L, "Data - %06X\n\r", data);
+		APP_LOG(TS_OFF, VLEVEL_L, "Payload - %08X%08X\n\r", (uint32_t)(*pay >> 32), (uint32_t)*pay);
+    }
+    else
+    	APP_LOG(TS_OFF, VLEVEL_L, "Incorrect Confirmation Number\n\r");
+	APP_LOG(TS_OFF, VLEVEL_L, "------------------------------------\n\r");
 	memset(BufferRx, 0, MAX_APP_BUFFER_SIZE);
 	UTIL_SEQ_SetTask((1 << CFG_SEQ_Task_RX), CFG_SEQ_Prio_RX);
 }
@@ -147,7 +153,7 @@ static void OnRxTimeout(void)
 
 static void OnRxError(void)
 {
-	APP_LOG(TS_ON, VLEVEL_L, "RX Error: Retrying RX\n\r");
+	APP_LOG(TS_ON, VLEVEL_M, "RX Error: Retrying RX\n\r");
 	UTIL_SEQ_SetTask((1 << CFG_SEQ_Task_RX), CFG_SEQ_Prio_RX);
 }
 
@@ -162,18 +168,18 @@ static void TX_Process(void)
 	if(!TX_InProgress){
 		HAL_GPIO_WritePin(LED_Port, LED_Pin, GPIO_PIN_RESET);
 		TX_InProgress = true;
-		uint8_t conf = 206;
+		uint8_t conf = CONF;
 		uint32_t deviceNum = UID_GetDeviceNumber();
 		uint32_t data = (Radio.Random()) >> 8;
 	    uint64_t payload = ((uint64_t)conf << 56)
 	                     | ((uint64_t)deviceNum << 24)
 	                     | ((uint64_t)data);
-		APP_LOG(TS_ON, VLEVEL_L, "------------------------------------\n\r");
-		APP_LOG(TS_ON, VLEVEL_L, "TX Start: Attempting to send payload\n\r");
-		APP_LOG(TS_ON, VLEVEL_L, "Confirmation - %02X\n\r", conf);
-		APP_LOG(TS_ON, VLEVEL_L, "Device Number - %08X\n\r", deviceNum);
-		APP_LOG(TS_ON, VLEVEL_L, "Data - %06X\n\r", data);
-		APP_LOG(TS_ON, VLEVEL_L, "Payload - %08X%08X\n\r", (uint32_t)(payload >> 32), (uint32_t)payload);
+		APP_LOG(TS_OFF, VLEVEL_L, "------------------------------------\n\r");
+		APP_LOG(TS_OFF, VLEVEL_L, "TX Start: Attempting to send payload\n\r");
+		APP_LOG(TS_OFF, VLEVEL_L, "Confirmation - %02X\n\r", conf);
+		APP_LOG(TS_OFF, VLEVEL_L, "Device Number - %08X\n\r", deviceNum);
+		APP_LOG(TS_OFF, VLEVEL_L, "Data - %06X\n\r", data);
+		APP_LOG(TS_OFF, VLEVEL_L, "Payload - %08X%08X\n\r", (uint32_t)(payload >> 32), (uint32_t)payload);
 		payloadSize = sizeof(payload);
 		memcpy(BufferTx, &payload, payloadSize);
 	}
