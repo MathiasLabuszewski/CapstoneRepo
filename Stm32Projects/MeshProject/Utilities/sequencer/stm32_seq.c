@@ -288,7 +288,6 @@ void UTIL_SEQ_Run( UTIL_SEQ_bm_t Mask_bm )
 
     /* Execute the task */
     TaskCb[CurrentTaskIdx]( );
-
     local_taskset = TaskSet;
     local_evtset = EvtSet;
     local_taskmask = TaskMask;
@@ -547,4 +546,3 @@ uint8_t SEQ_BitPosition(uint32_t Value)
 /**
   * @}
   */
-

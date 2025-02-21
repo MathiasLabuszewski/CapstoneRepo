@@ -41,7 +41,7 @@ extern "C" {
 /**
   * @brief  Verbose level for all trace logs
   */
-#define VERBOSE_LEVEL                        VLEVEL_L
+#define VERBOSE_LEVEL                        VLEVEL_M
 
 /**
   * @brief Enable trace logs

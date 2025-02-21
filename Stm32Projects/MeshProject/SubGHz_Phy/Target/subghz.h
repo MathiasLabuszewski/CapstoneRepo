@@ -49,4 +49,3 @@ void MX_SUBGHZ_Init(void);
 #endif
 
 #endif /* __SUBGHZ_H__ */
-

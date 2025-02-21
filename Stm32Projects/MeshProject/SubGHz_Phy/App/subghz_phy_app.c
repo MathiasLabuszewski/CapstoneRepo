@@ -6,6 +6,7 @@
 #include "stm32_timer.h"
 #include "stm32_seq.h"
 #include "utilities_def.h"
+#include "adc_test.h"
 #include "app_version.h"
 #include "subghz_phy_version.h"
 #include "utils.h"
@@ -34,6 +35,8 @@ static uint64_t payload;
 static uint64_t BufferData[NUM_PAYLOADS_STORE];  // Store received payloads
 static uint16_t bufferIndex = 0;                 // Track next free slot
 
+uint16_t test = 0;
+
 static void OnRxDone(uint8_t *payload, uint16_t size, int16_t rssi, int8_t LoraSnr_FskCfo);
 static void OnTxDone(void);
 static void OnTxTimeout(void);
@@ -44,7 +47,9 @@ static void TX_Process(void);
 static void createPayload(void);
 static bool isDuplicate(uint64_t payload);
 static void storePayload(uint64_t payload);
-
+uint16_t v1 = 0;
+uint16_t v2 = 0;
+uint16_t v3 = 0;
 void SubghzApp_Init(void)
 {
   /* Radio initialization */
@@ -162,7 +167,8 @@ static void TX_Process(void)
 static void createPayload(void){
 	conf = CONF;
 	deviceNum = UID_GetDeviceNumber();
-	data = (Radio.Random()) >> 8;
+	//data = (Radio.Random()) >> 8;
+	adcRead(&data, &v2, &v3);
 	payload = ((uint64_t)conf << 56)
                      | ((uint64_t)deviceNum << 24)
                      | ((uint64_t)data);

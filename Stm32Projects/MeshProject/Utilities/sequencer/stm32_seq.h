@@ -357,4 +357,3 @@ void UTIL_SEQ_EvtIdle( UTIL_SEQ_bm_t TaskId_bm, UTIL_SEQ_bm_t EvtWaited_bm );
 #endif
 
 #endif /*__STM32_SEQ_H */
-
