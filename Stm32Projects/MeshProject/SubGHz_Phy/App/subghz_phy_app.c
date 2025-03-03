@@ -11,7 +11,7 @@
 #include "subghz_phy_version.h"
 #include "utils.h"
 #include <stdbool.h>
-
+#include "usart.h"
 
 #define RX_TIMEOUT_VALUE              5000
 #define TX_TIMEOUT_VALUE              1000
@@ -36,6 +36,7 @@ static uint64_t BufferData[NUM_PAYLOADS_STORE];  // Store received payloads
 static uint16_t bufferIndex = 0;                 // Track next free slot
 
 uint16_t test = 0;
+extern UART_HandleTypeDef hlpuart1;
 
 static void OnRxDone(uint8_t *payload, uint16_t size, int16_t rssi, int8_t LoraSnr_FskCfo);
 static void OnTxDone(void);
@@ -159,7 +160,19 @@ static void TX_Process(void)
 	HAL_GPIO_WritePin(LED_Port, LED_Pin, GPIO_PIN_RESET);
 	APP_LOG(TS_ON, VLEVEL_M, "TX Start: Attempting to send payload\n\r");
 	TX_InProgress = true;
+	uint8_t payload_buffer[8];
+	uint8_t reverse_payload[8];
+	memcpy(payload_buffer, &payload, sizeof(payload));
 	storePayload(payload);
+	HAL_StatusTypeDef uart_status = HAL_UART_Transmit(&hlpuart1,reverse_payload,sizeof(payload_buffer),1000);
+	//uint8_t test_message[] = "UART Test\n\r";
+	//HAL_StatusTypeDef uart_status = HAL_UART_Transmit(&hlpuart1, test_message, sizeof(test_message)-1, 1000);
+
+	if (uart_status == HAL_OK) {
+		APP_LOG(TS_ON, VLEVEL_M, "UART Transmission Success\n\r");
+	} else {
+		APP_LOG(TS_ON, VLEVEL_M, "UART Transmission Failed: %d\n\r", uart_status);
+	}
 	memcpy(BufferTx, &payload, PAYLOAD_SIZE);
     Radio.Send(BufferTx, PAYLOAD_SIZE);
 }
@@ -167,8 +180,8 @@ static void TX_Process(void)
 static void createPayload(void){
 	conf = CONF;
 	deviceNum = UID_GetDeviceNumber();
-	//data = (Radio.Random()) >> 8;
-	adcRead(&data, &v2, &v3);
+	data = (Radio.Random()) >> 8;
+	//adcRead(&data, &v2, &v3);
 	payload = ((uint64_t)conf << 56)
                      | ((uint64_t)deviceNum << 24)
                      | ((uint64_t)data);

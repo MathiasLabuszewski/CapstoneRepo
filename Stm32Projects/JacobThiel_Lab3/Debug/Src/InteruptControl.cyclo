@@ -1,0 +1,5 @@
+../Src/InteruptControl.c:18:6:IRQ_Enable	2
+../Src/InteruptControl.c:23:6:IRQ_Disable	2
+../Src/InteruptControl.c:28:6:IRQ_Clear	2
+../Src/InteruptControl.c:33:6:IRQ_Set	2
+../Src/InteruptControl.c:39:6:EXTI_Clear	1
