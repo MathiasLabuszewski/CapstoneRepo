@@ -1,0 +1,12 @@
+../SubGHz_Phy/App/subghz_phy_app.c:48:6:SubghzApp_Init	1
+../SubGHz_Phy/App/subghz_phy_app.c:86:13:OnTxDone	1
+../SubGHz_Phy/App/subghz_phy_app.c:94:13:OnRxDone	5
+../SubGHz_Phy/App/subghz_phy_app.c:128:13:OnTxTimeout	1
+../SubGHz_Phy/App/subghz_phy_app.c:134:13:OnRxTimeout	1
+../SubGHz_Phy/App/subghz_phy_app.c:140:13:OnRxError	1
+../SubGHz_Phy/App/subghz_phy_app.c:146:13:RX_Process	1
+../SubGHz_Phy/App/subghz_phy_app.c:152:13:TX_Process	1
+../SubGHz_Phy/App/subghz_phy_app.c:162:13:createPayload	1
+../SubGHz_Phy/App/subghz_phy_app.c:180:13:isDuplicate	3
+../SubGHz_Phy/App/subghz_phy_app.c:189:13:storePayload	2
+../SubGHz_Phy/App/subghz_phy_app.c:198:6:HAL_GPIO_EXTI_Callback	3
