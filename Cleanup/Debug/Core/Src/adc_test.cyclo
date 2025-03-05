@@ -1,0 +1,7 @@
+../Drivers/STM32WLxx_HAL_Driver/Inc/stm32wlxx_ll_bus.h:449:22:LL_AHB2_GRP1_EnableClock	1
+../Core/Src/adc_test.c:16:6:buttonInit	1
+../Core/Src/adc_test.c:34:6:adcInit	3
+../Core/Src/adc_test.c:112:6:selectChannel11	2
+../Core/Src/adc_test.c:126:6:selectChannel2	2
+../Core/Src/adc_test.c:139:6:selectChannel3	2
+../Core/Src/adc_test.c:152:6:adcRead	1

@@ -1,5 +1,0 @@
-../Core/Src/utils.c:22:10:UID_GetFullUID	32	static
-../Core/Src/utils.c:29:10:UID_GetDeviceNumber	4	static
-../Core/Src/utils.c:34:10:UID_GetCompanyID	16	static
-../Core/Src/utils.c:40:9:UID_GetDeviceID	16	static
-../Core/Src/utils.c:46:9:UID_GetPackageType	16	static
